@@ -71,6 +71,22 @@ public class Player implements sunshine.sim.Player
 			}
 		}
 	};
+	
+	public List<Point> within_radius(List<Point> bales, int radius)
+	{
+		double r_squared = (double) radius * radius;
+		List<Points> within = new ArrayList<Point>();
+		for (int i = 0; i < bales.size();i++)
+		{
+			double x = bales.get(i).x;
+			double y = bales.get(i).y;
+			if((x * x) + (y * y) <= r_squared)
+			{
+				within.add(bales.get(i));
+			}
+		}
+		return within;
+	}
 
 	// Will break a list into a list<list>, maxmimize all lists up to n.
 	// The last list may be size n or less
@@ -103,6 +119,12 @@ public class Player implements sunshine.sim.Player
 			this.trailer_bales = new ArrayList<Point>();
 			return;
 		}
+		else if(split == 0)
+		{
+			this.tractor_bales = new ArrayList<Point>;
+			this.trailer_bales = bales;
+			return;
+		}
 		// split determines the fraction going to tractor.
 		// e.g 1/2 means 1/2 tractor 1/2 trailer
 		// e.g 1/3 means 1/3 tractor and 2/3 trailer
@@ -121,7 +143,6 @@ public class Player implements sunshine.sim.Player
 		// 2- 1/2 closest to trailer
 		// For now, all of them will go to trailer...
 		split_trailer_tractor_batch(bales, 1);
-
 		this.n_tractors = n;
 		this.dimensions = m;
 
