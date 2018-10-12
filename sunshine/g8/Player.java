@@ -39,6 +39,12 @@ public class Player implements sunshine.sim.Player
 	private int n_tractors = 0;
 	private double dimensions = 0;
 	private int haystack = 0;
+	
+	// Store equation of a line
+	// y - y_0 = m(x - x_0), m = y_1 - y_0/x_1 - x_0, and P1 = (x_1, y_1), P2 = (x_0, y_0)
+	private int slope = 0;
+	private int y_0 = 0;
+	private int x_0 = 0;
 
 	public Player() 
 	{
@@ -72,6 +78,8 @@ public class Player implements sunshine.sim.Player
 		}
 	};
 	
+	// The center of the circle will be the BARN. 
+	// May need to implement this to work for all points (like a trailer?)
 	public List<Point> within_radius(List<Point> bales, int radius)
 	{
 		double r_squared = (double) radius * radius;
@@ -87,6 +95,8 @@ public class Player implements sunshine.sim.Player
 		}
 		return within;
 	}
+	
+	// 
 
 	// Will break a list into a list<list>, maxmimize all lists up to n.
 	// The last list may be size n or less
