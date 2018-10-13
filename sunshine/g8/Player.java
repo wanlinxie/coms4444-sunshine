@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Random;
 import java.util.HashMap;
 import java.util.Comparator;
@@ -42,9 +41,6 @@ public class Player implements sunshine.sim.Player
 	// Get number of tractors, change stategy as needed
 	private int n_tractors = 0;
 	private double dimensions = 0;
-	private int haystack = 0;
-        private int tractor_bales_left = 0;
-        private ListIterator<Point> bales_left;
 
 
 	public Player() 
@@ -106,14 +102,14 @@ public class Player implements sunshine.sim.Player
 	{
             if(split == 1)
             {
-                this.tractor_bales = bales;
-                this.trailer_bales = new ArrayList<Point>();
+                tractor_bales = bales;
+                trailer_bales = new ArrayList<Point>();
                 return;
             }
             else if(split == 0)
             {
-                this.tractor_bales = new ArrayList<Point>();
-                this.trailer_bales = bales;
+                tractor_bales = new ArrayList<Point>();
+                trailer_bales = bales;
                 return;
             }
             // split determines the fraction going to tractor.
@@ -123,27 +119,10 @@ public class Player implements sunshine.sim.Player
             {
                 //System.err.println(bales.size());
                 int split_idx = (int) (bales.size() * split);
-                /*
-                this.tractor_bales = new ArrayList<Point>();
-                this.trailer_bales = new ArrayList<Point>();
-                for (int i = 0; i < split_idx; i++)
-                {
-                    tractor_bales.add(bales.get(i));
-                }
-                for (int j = split_idx; j < bales.size(); j++)
-                {
-                    trailer_bales.add(bales.get(j));
-                }
-                SIZE = trailer_bales.size();
-                */
-
-                this.trailer_bales = bales.subList(split_idx, bales.size());
-                this.tractor_bales = bales.subList(0, split_idx);
-                System.err.println("Trailer size: " + trailer_bales.size());
-                System.err.println("Tractor size: " + tractor_bales.size());
-                tractor_bales_left = tractor_bales.size();
-                //--tractor_bales_left; //start at size() - 1
-                bales_left = tractor_bales.listIterator();
+                trailer_bales = new ArrayList<>(bales.subList(split_idx, bales.size()));
+                tractor_bales = new ArrayList<>(bales.subList(0, split_idx));
+                System.err.println("INIT Trailer size: " + trailer_bales.size());
+                System.err.println("INIT Tractor size: " + tractor_bales.size());
             }
         }
 
@@ -155,7 +134,8 @@ public class Player implements sunshine.sim.Player
             total_bales = bales;
             // 1- 1/2 closest to tractor
             // 2- 1/2 closest to trailer
-            // For now, all of them will go to trailer...
+            // input 1 = Use GREEDY oNLY
+            // input 0 = Use Trailer ONLY
             split_trailer_tractor_batch(bales, 0.3);
             for (int i = 0;i < n;i++) 
             {
@@ -171,8 +151,8 @@ public class Player implements sunshine.sim.Player
 	public Command trailer_greedy(Tractor tractor)
 	{
             System.err.println("Total Bales: " + total_bales.size());
-            //System.err.println("Trailer: " + trailer_bales.size());
-            System.err.println("Tractor: " + tractor_bales_left);
+            System.err.println("Trailer: " + trailer_bales.size());
+            System.err.println("Tractor: " + tractor_bales.size());
             if(tractor.getAttachedTrailer() != null)
             {
                 return new Command(CommandType.DETATCH);
@@ -197,20 +177,17 @@ public class Player implements sunshine.sim.Player
                 if(tractor.getLocation().equals(BARN))
                 {
                     Point p;
-                    if(total_bales.size() == 0)
+                    if(tractor_bales.size() == 0)
                     //if(!bales_left.hasNext())
                     {
                         // NO-OP
-                        System.out.println("Size of Total_bales: " + total_bales.size());
                         return new Command(CommandType.STACK);
                     }
                     else
                     {
-                        p = total_bales.remove(total_bales.size() - 1);
+                        p = tractor_bales.remove(tractor_bales.size() - 1);
                         //p = total_bales.get(tractor_bales_left);
-                        //p = bales_left.next();
                         //p = tractor_bales.get(tractor_bales_left);
-                        --tractor_bales_left;
                         return Command.createMoveCommand(p);
                     }
                 }
@@ -283,7 +260,7 @@ public class Player implements sunshine.sim.Player
         // Step 2- Empty out TRACTOR BALES
 	public Command getCommand(Tractor tractor)
 	{
-                if(total_bales.size() <= tractor_bales_left)
+                if(trailer_bales.size() == 0)
                 {
                     System.out.println("Sink 1: ---done---");
                     return trailer_greedy(tractor);
@@ -294,7 +271,7 @@ public class Player implements sunshine.sim.Player
 		{
 			//empty list right now
 			//pick farthest point
-			if (total_bales.size() <= tractor_bales_left)
+			if (trailer_bales.size() == 0)
 			{
                             System.out.println("Sink 2: ---done---");
                             return trailer_greedy(tractor);
@@ -355,7 +332,6 @@ public class Player implements sunshine.sim.Player
                                         // THIS LINE NEVER HAPPENS
 					else 
 					{
-                                            System.out.println("START GREEDY?\n");
                                             return trailer_greedy(tractor);
 					}
 				} 
