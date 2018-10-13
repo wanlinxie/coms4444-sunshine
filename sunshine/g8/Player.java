@@ -121,6 +121,7 @@ public class Player implements sunshine.sim.Player
                 int split_idx = (int) (bales.size() * split);
                 trailer_bales = new ArrayList<>(bales.subList(split_idx, bales.size()));
                 tractor_bales = new ArrayList<>(bales.subList(0, split_idx));
+                System.err.println("INIT Bale size: " + bales.size());
                 System.err.println("INIT Trailer size: " + trailer_bales.size());
                 System.err.println("INIT Tractor size: " + tractor_bales.size());
             }
@@ -137,7 +138,7 @@ public class Player implements sunshine.sim.Player
             // input 1 = Use GREEDY oNLY
             // input 0 = Use Trailer ONLY
             split_trailer_tractor_batch(bales, 0.3);
-            for (int i = 0;i < n;i++) 
+            for (int i = 0; i < n; i++) 
             {
                 trailer_map.put(i, BARN);
                 trailer_num.put(i, 0);
@@ -178,7 +179,6 @@ public class Player implements sunshine.sim.Player
                 {
                     Point p;
                     if(tractor_bales.size() == 0)
-                    //if(!bales_left.hasNext())
                     {
                         // NO-OP
                         return new Command(CommandType.STACK);
@@ -186,8 +186,6 @@ public class Player implements sunshine.sim.Player
                     else
                     {
                         p = tractor_bales.remove(tractor_bales.size() - 1);
-                        //p = total_bales.get(tractor_bales_left);
-                        //p = tractor_bales.get(tractor_bales_left);
                         return Command.createMoveCommand(p);
                     }
                 }
@@ -260,7 +258,11 @@ public class Player implements sunshine.sim.Player
         // Step 2- Empty out TRACTOR BALES
 	public Command getCommand(Tractor tractor)
 	{
-                if(trailer_bales.size() == 0)
+		System.err.println("Trailer: " + trailer_bales.size());
+                System.err.println("Tractor: " + tractor_bales.size());
+
+		// ONLY SWITCH IS NO TRAILER BALES LEFT IN TASK LIST OR BALE ARRAY!
+                if(trailer_bales.size() == 0 && taskList.get(tractor.getId()).size() == 0)
                 {
                     System.out.println("Sink 1: ---done---");
                     return trailer_greedy(tractor);
@@ -269,8 +271,8 @@ public class Player implements sunshine.sim.Player
 		//System.out.println(trailer_bales.size());
 		if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
 		{
-			//empty list right now
-			//pick farthest point
+			// Empty list right now
+			// Pick farthest point
 			if (trailer_bales.size() == 0)
 			{
                             System.out.println("Sink 2: ---done---");
@@ -290,7 +292,7 @@ public class Player implements sunshine.sim.Player
 			{
 				Point p = trailer_bales.remove(trailer_bales.size()-1);
 				List<Point> tasks = closestTen(p,trailer_bales);
-				for (int i = 0;i < tasks.size();i++) 
+				for (int i = 0; i < tasks.size();i++) 
 				{	
                                     trailer_bales.remove(trailer_bales.indexOf(tasks.get(i)));
 				}
@@ -387,8 +389,7 @@ public class Player implements sunshine.sim.Player
 				else 
 				{
 					// Something in trailer, ready to move (should be 10)  //finished all tasks, ready to move to barn
-					Point p = new Point(0.0,0.0);
-					trailer_map.put(tractor.getId(), p);
+					trailer_map.put(tractor.getId(), BARN);
 					return Command.createMoveCommand(BARN);
 				}
 			}
@@ -422,9 +423,8 @@ public class Player implements sunshine.sim.Player
 						//forklift doesn't have bale, go to next in task list
 						else 
 						{ 
-							// no bale, need to go to next bale to 
+							// no bale, need to go to next bale 
 							Point p = taskList.get(tractor.getId()).get(0);
-							//Point p = trailer_bales.get(trailer_bales.size()-1);
 							//if you happen to already be there, load 
 							// TODO
 							//OR IF LOCATION IS WITHIN ONE METER
@@ -455,7 +455,7 @@ public class Player implements sunshine.sim.Player
 							return Command.createMoveCommand(p);
 						}
 					}
-				} 
+				}
 				else 
 				{ 
 					//tasklist done
