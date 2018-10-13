@@ -154,46 +154,72 @@ public class Player implements sunshine.sim.Player
             System.err.println("Total Bales: " + total_bales.size());
             System.err.println("Trailer: " + trailer_bales.size());
             System.err.println("Tractor: " + tractor_bales.size());
-            if(tractor.getAttachedTrailer() != null)
-            {
-                return new Command(CommandType.DETATCH);
-            }
-                        
-            if (tractor.getHasBale()) 
-            {
-                // Unload the bale at the barn
-                if (tractor.getLocation().equals(BARN)) 
-                {
-                    return new Command(CommandType.UNLOAD);
-                }
-                // Move back to the barn!	
-                else 
-                {
-                    return Command.createMoveCommand(BARN);
-                }
-            }		
-            // There is no bale!
-            else 
-            {
-                if(tractor.getLocation().equals(BARN))
-                {
-                    Point p;
-                    if(tractor_bales.size() == 0)
-                    {
-                        // NO-OP
-                        return new Command(CommandType.STACK);
-                    }
-                    else
-                    {
-                        p = tractor_bales.remove(tractor_bales.size() - 1);
-                        return Command.createMoveCommand(p);
-                    }
-                }
+            
+            // At this Point I know the Trailer Bale List is empty
+	    // There is also NO Remaining Tasks!
+	    // BUT THERE ARE TRAILERS WITH SOME BALES IN THEM. WE MUST FACTOR THIS IN
+
+            // Check if trailer is empty
+ 	if(tractor.getLocation().equals(BARN))
+	{
+		if(tractor.getAttachedTrailer() != null)
+		{
+			return new Command(CommandType.DETATCH);
+		}
                 else
                 {
-                    return new Command(CommandType.LOAD);
-                }
-            }
+			if (tractor.getHasBale()) 
+ 			{
+				// Unload the bale at the barn
+				return new Command(CommandType.UNLOAD);	
+            		}
+			// Get a bale!
+ 			else 
+			{
+				Point p;
+				// No-op, but also safety because I know all trailers in barn now
+		           	if(tractor_bales.size() == 0)
+                   		{
+					return new Command(CommandType.UNSTACK);
+ 				}
+				p = tractor_bales.remove(tractor_bales.size() - 1);
+ 				return Command.createMoveCommand(p);
+			}
+		}
+	}
+	// Trailer and/or tractor NOT in barn
+	else
+	{
+		// Check if there is attached trailer
+		if(tractor.getAttachedTrailer() != null)
+ 		{
+			// If the attached trailer is empty, ditch it, go home and do greedy!
+			if(tractor.getAttachedTrailer().getNumBales() == 0)
+			{
+				return new Command(CommandType.DETATCH);
+			}
+			// If there are goodies, return it to the barn!
+			else
+			{
+				return Command.createMoveCommand(BARN);
+			}
+		}
+		// tractor is not attached, but does its trailer have bales?
+		else
+		{
+			// If there is good stuff, attach and go to barn!
+			if(trailer_num.get(tractor.getId()) != 0)
+			{
+				return new Command(CommandType.ATTACH);
+			}
+			else
+			{
+				return new Command(CommandType.LOAD);
+			}
+		}
+	}
+
+         	
 	}
 
 	private int getMaxIdx(List<Double> ptlist) 
@@ -264,11 +290,9 @@ public class Player implements sunshine.sim.Player
 		// ONLY SWITCH IS NO TRAILER BALES LEFT IN TASK LIST OR BALE ARRAY!
                 if(trailer_bales.size() == 0 && taskList.get(tractor.getId()).size() == 0)
                 {
-                    System.out.println("Sink 1: ---done---");
-                    return trailer_greedy(tractor);
+			return trailer_greedy(tractor);
                 }
                 
-		//System.out.println(trailer_bales.size());
 		if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
 		{
 			// Empty list right now
@@ -336,7 +360,7 @@ public class Player implements sunshine.sim.Player
 					{
                                             return trailer_greedy(tractor);
 					}
-				} 
+				}
 				else 
 				{ 
 					//trailer is attached, trailer has bales
