@@ -27,7 +27,7 @@ public class Player implements sunshine.sim.Player
 	// List of Bales, one batch for trailers and the other for tractor ONLY
 	private List<Point> tractor_bales;
 	private List<Point> trailer_bales;
-        private List<Point> total_bales;
+    private List<Point> total_bales;
 
 	// Make list of centroids, Deposit points for the trailer
 	private List<Point> centroids = new ArrayList<Point>();
@@ -137,7 +137,7 @@ public class Player implements sunshine.sim.Player
             // 2- 1/2 closest to trailer
             // input 1 = Use GREEDY oNLY
             // input 0 = Use Trailer ONLY
-            split_trailer_tractor_batch(bales, 0.3);
+            split_trailer_tractor_batch(bales, 0);
             for (int i = 0; i < n; i++) 
             {
                 trailer_map.put(i, BARN);
@@ -151,75 +151,103 @@ public class Player implements sunshine.sim.Player
 	// OPTON 1: USE NO TRAILER, for use with 1 Tractor
 	public Command trailer_greedy(Tractor tractor)
 	{
+			/*
             System.err.println("Total Bales: " + total_bales.size());
             System.err.println("Trailer: " + trailer_bales.size());
             System.err.println("Tractor: " + tractor_bales.size());
-            
+		 	*/    
             // At this Point I know the Trailer Bale List is empty
-	    // There is also NO Remaining Tasks!
-	    // BUT THERE ARE TRAILERS WITH SOME BALES IN THEM. WE MUST FACTOR THIS IN
+            // There is also NO Remaining Tasks!
+            // BUT THERE ARE TRAILERS WITH SOME BALES IN THEM. WE MUST FACTOR THIS IN
 
-            // Check if trailer is empty
- 	if(tractor.getLocation().equals(BARN))
-	{
-		if(tractor.getAttachedTrailer() != null)
-		{
-			return new Command(CommandType.DETATCH);
-		}
-                else
-                {
-			if (tractor.getHasBale()) 
- 			{
-				// Unload the bale at the barn
-				return new Command(CommandType.UNLOAD);	
+            // Is the tractor at the barn
+            if(tractor.getLocation().equals(BARN))
+            {
+            	if (tractor.getHasBale()) 
+        		{
+        			return new Command(CommandType.UNLOAD);	
+        		}
+            	else
+            	{
+            		// Detach any trailer to allow unstacking!
+            		if(tractor.getAttachedTrailer() != null)
+                	{
+            			trailer_map.put(tractor.getId(), tractor.getLocation());
+                		return new Command(CommandType.DETATCH);
+                	}
+            		// There is no trailer!
+            		else 
+            		{
+            			Point p;
+            			// First priority: UNSTACK!
+            			if(trailer_num.get(tractor.getId()) > 0)
+            			{
+            				trailer_num.put(tractor.getId(), trailer_num.get(tractor.getId()) - 1); //update hashmap
+            				return new Command(CommandType.UNSTACK);
+            			}
+            			// Time to look for another bale!
+            			else
+            			{
+            				// Make sure the task list is empty like for real!
+            				if(taskList.get(tractor.getId()).size() > 0)
+            				{
+            					p = taskList.get(tractor.getId()).remove(0);
+            					return Command.createMoveCommand(p);
+            				}
+            				else
+            				{
+            					if(!tractor_bales.isEmpty())
+            					{
+                					p = tractor_bales.remove(tractor_bales.size() - 1);
+                        			return Command.createMoveCommand(p);	
+            					}
+            					else
+            					{
+            						// Diagnose.. grab any loose trailers?
+                					p = trailer_cleanup();
+                					if(p != null)
+                					{
+                						return Command.createMoveCommand(p);
+                					}
+                					else
+                					{
+                    					return new Command(CommandType.UNSTACK);	
+                					}
+            					}
+            				}	
+            			}
             		}
-			// Get a bale!
- 			else 
-			{
-				Point p;
-				// No-op, but also safety because I know all trailers in barn now
-		           	if(tractor_bales.size() == 0)
-                   		{
-					return new Command(CommandType.UNSTACK);
- 				}
-				p = tractor_bales.remove(tractor_bales.size() - 1);
- 				return Command.createMoveCommand(p);
-			}
-		}
-	}
-	// Trailer and/or tractor NOT in barn
-	else
-	{
-		// Check if there is attached trailer
-		if(tractor.getAttachedTrailer() != null)
- 		{
-			// If the attached trailer is empty, ditch it, go home and do greedy!
-			if(tractor.getAttachedTrailer().getNumBales() == 0)
-			{
-				return new Command(CommandType.DETATCH);
-			}
-			// If there are goodies, return it to the barn!
-			else
-			{
-				return Command.createMoveCommand(BARN);
-			}
-		}
-		// tractor is not attached, but does its trailer have bales?
-		else
-		{
-			// If there is good stuff, attach and go to barn!
-			if(trailer_num.get(tractor.getId()) != 0)
-			{
-				return new Command(CommandType.ATTACH);
-			}
-			else
-			{
-				return new Command(CommandType.LOAD);
-			}
-		}
-	}
-
-         	
+            	}
+            }
+            // Trailer and/or tractor NOT in barn
+            else
+            {
+            	// I don't care! COME BACK NOW!
+            	if(tractor.getAttachedTrailer() != null)
+            	{
+            		return Command.createMoveCommand(BARN);
+            	}
+            	// tractor is not attached, but does its trailer have bales?
+            	else
+            	{
+            		// If on trailer location, attach and GO!
+            		if(!trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
+            		{
+            			return new Command(CommandType.ATTACH);
+            		}
+            		else
+            		{
+            			if(tractor.getHasBale())
+                    	{
+                    		return Command.createMoveCommand(BARN);
+                    	}
+                    	else
+                    	{
+                    		return new Command(CommandType.LOAD);	
+                    	}
+            		}
+            	}
+            }
 	}
 
 	private int getMaxIdx(List<Double> ptlist) 
@@ -228,7 +256,7 @@ public class Player implements sunshine.sim.Player
 		int maxindex = 0;
 		for (int i=0;i<ptlist.size();i++) 
 		{
-			if (ptlist.get(i)>max) 
+			if (ptlist.get(i) > max) 
 			{
 				max = ptlist.get(i);
 				maxindex = i;
@@ -239,35 +267,35 @@ public class Player implements sunshine.sim.Player
 
 	private List<Point> closestTen(Point x, List<Point> currBales) 
 	{
-            List<Point> pos = new ArrayList<Point>();
-            List<Double> dist = new ArrayList<Double>();
-            int k = 0;
-            double max = 0;
+		List<Point> pos = new ArrayList<Point>();
+		List<Double> dist = new ArrayList<Double>();
+		int k = 0;
+		double max = 0;
 
-            for (Point p: currBales) 
-            {
-                if(k < 10) 
-                {
-                    double temp = distance(x,p);
-                    pos.add(p);
-                    dist.add(temp);
-                    k++;
-                }	
-                else 
-                {
-                    double temp = distance(x,p);
-                    int i = getMaxIdx(dist);
-                    max = dist.get(i);
-                    if (max > temp) 
-                    {
-                        dist.remove(i);
-                        pos.remove(i);
-                        dist.add(temp);
-                        pos.add(p);
-                    }
-                }
-            }	
-            return pos;
+		for (Point p: currBales) 
+		{
+			if(k < 10) 
+			{
+				double temp = distance(x,p);
+				pos.add(p);
+				dist.add(temp);
+				k++;
+			}	
+			else 
+			{
+				double temp = distance(x,p);
+				int i = getMaxIdx(dist);
+				max = dist.get(i);
+				if (max > temp) 
+				{
+					dist.remove(i);
+					pos.remove(i);
+					dist.add(temp);
+					pos.add(p);
+				}
+			}
+		}	
+		return pos;
 	}
 
 	//do math to get point within 1 meter
@@ -280,34 +308,36 @@ public class Player implements sunshine.sim.Player
             return res; 
 	}
 
-        // Step 1- Empty out TRAILER BALES
-        // Step 2- Empty out TRACTOR BALES
+    // Step 1- Empty out TRAILER BALES
+    // Step 2- Empty out TRACTOR BALES
 	public Command getCommand(Tractor tractor)
 	{
-		System.err.println("Trailer: " + trailer_bales.size());
-                System.err.println("Tractor: " + tractor_bales.size());
+		//System.err.println("Trailer: " + trailer_bales.size());
+        //System.err.println("Tractor: " + tractor_bales.size());
 
 		// ONLY SWITCH IS NO TRAILER BALES LEFT IN TASK LIST OR BALE ARRAY!
-                if(trailer_bales.size() == 0 && taskList.get(tractor.getId()).size() == 0)
-                {
+        
+        if(trailer_bales.isEmpty() && taskList.get(tractor.getId()).size() == 0)
+        {
 			return trailer_greedy(tractor);
-                }
+        }
                 
+        // If you are at the barn and have no task...
 		if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
 		{
 			// Empty list right now
 			// Pick farthest point
-			if (trailer_bales.size() == 0)
+			if (trailer_bales.isEmpty())
 			{
-                            System.out.println("Sink 2: ---done---");
-                            return trailer_greedy(tractor);
-                        }
+                   System.out.println("Sink 2: ---done---");
+                   return trailer_greedy(tractor);
+            }
 			else if (trailer_bales.size() <= 11) 
 			{
 				List<Point> tasks = new ArrayList<Point>();
 				for(int i = 0;i < trailer_bales.size();i++)
 				{	
-                                    tasks.add(trailer_bales.remove(i));
+                     tasks.add(trailer_bales.remove(i));
 				}
 				Collections.sort(tasks, pointComparator);
 				taskList.put(tractor.getId(),tasks);
@@ -318,7 +348,7 @@ public class Player implements sunshine.sim.Player
 				List<Point> tasks = closestTen(p,trailer_bales);
 				for (int i = 0; i < tasks.size();i++) 
 				{	
-                                    trailer_bales.remove(trailer_bales.indexOf(tasks.get(i)));
+                     trailer_bales.remove(trailer_bales.indexOf(tasks.get(i)));
 				}
 				tasks.add(p);
 				//sort tasks by distance to BARN,
@@ -333,7 +363,7 @@ public class Player implements sunshine.sim.Player
 			//if at barn and has bale, always unload
 			if (tractor.getHasBale()) 
 			{	
-                            return new Command(CommandType.UNLOAD);
+                  return new Command(CommandType.UNLOAD);
 			}
 			else if (tractor.getAttachedTrailer() != null) //trailer
 			{
@@ -345,7 +375,7 @@ public class Player implements sunshine.sim.Player
 					}*/
 					//either move if 
 					if ((taskList.get(tractor.getId()).size()) > 0) 
-					{ 
+					{
 						//tractor has tasks
 						Point p = taskList.get(tractor.getId()).get(0);
 						//TODO
@@ -354,11 +384,12 @@ public class Player implements sunshine.sim.Player
 
 						//Point o = optimalPoint(p); 
 						return Command.createMoveCommand(p);
-                                        }
-                                        // THIS LINE NEVER HAPPENS
+                    }
+                    // THIS LINE NEVER HAPPENS
 					else 
 					{
-                                            return trailer_greedy(tractor);
+						System.err.println("Reaching here should be impossible...");
+                        return trailer_greedy(tractor);
 					}
 				}
 				else 
@@ -384,7 +415,7 @@ public class Player implements sunshine.sim.Player
 					}
 				} 
 				else 
-				{ 
+				{
 					//detached trailer has 0 bales
 					if (tractor.getHasBale()) 
 					{
@@ -465,7 +496,7 @@ public class Player implements sunshine.sim.Player
 						}
 					} 
 					else 
-					{ 
+					{
 						//trailer is full, tractor must load
 						Point p = taskList.get(tractor.getId()).get(0);
 						if (tractor.getLocation().equals(p)) 
@@ -497,5 +528,50 @@ public class Player implements sunshine.sim.Player
 				}
 			}
 		}
+	}
+	
+	// Debugging
+	public int sum(List<Integer> e)
+	{
+		int sum = 0;
+		for (int i = 0; i < e.size();i++)
+		{
+			sum += e.get(i).intValue();
+		}
+		return sum;
+	}
+	
+	public int sum(Integer [] e)
+	{
+		int sum = 0;
+		for (int i = 0; i < e.length;i++)
+		{
+			sum += e[i].intValue();
+		}
+		return sum;
+	}
+	
+	// Get sum of bales right now in trailer
+	public int in_trailer()
+	{
+		Integer [] remainder = trailer_num.values().toArray(new Integer[trailer_num.size()]);
+		return sum(remainder);
+	}
+	
+	// If there are loose trailers with bales...grab them and return to the barn!
+	public Point trailer_cleanup()
+	{
+		Point grab = null;
+		Point [] remainder = trailer_map.values().toArray(new Point[trailer_map.size()]);
+		System.out.println("There are " + remainder.length + " trailers not in barn");
+		for (int i = 0; i < remainder.length; i++)
+		{
+			if(!remainder[i].equals(BARN))
+			{
+				grab = remainder[i];
+				return grab;
+			}
+		}
+		return grab;
 	}
 }
