@@ -231,7 +231,7 @@ public class Player implements sunshine.sim.Player
             	else
             	{
             		// If on trailer location, attach and GO!
-            		if(!trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
+            		if(trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
             		{
             			return new Command(CommandType.ATTACH);
             		}
@@ -243,7 +243,17 @@ public class Player implements sunshine.sim.Player
                     	}
                     	else
                     	{
-                    		return new Command(CommandType.LOAD);	
+                    		if(tractor_bales.isEmpty())
+                    		{
+                    			return Command.createMoveCommand(BARN);
+                    		}
+                    		else
+                    		{
+                    			System.out.println("In Trailers: " + in_trailer());
+                        		System.out.println("In Task List: " + taskList.get(tractor.getId()).size());
+                        		System.out.println("In tractor bale: " + tractor_bales.size());
+                        		return new Command(CommandType.LOAD);
+                    		}
                     	}
             		}
             	}
