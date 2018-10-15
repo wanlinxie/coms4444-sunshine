@@ -10,6 +10,8 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.Comparator;
 
+import java.io.*;
+
 import sunshine.sim.Command;
 import sunshine.sim.Tractor;
 import sunshine.sim.CommandType;
@@ -23,6 +25,7 @@ public class Player implements sunshine.sim.Player
 	private int seed = 42;
 	private Random rand;
 	private final static Point BARN= new Point(0.0, 0.0);
+	private final static double DISTANCE_CUTOFF = 300;
 
 	// List of Bales, one batch for trailers and the other for tractor ONLY
 	private List<Point> tractor_bales;
@@ -41,7 +44,10 @@ public class Player implements sunshine.sim.Player
 	// Get number of tractors, change stategy as needed
 	private int n_tractors = 0;
 	private double dimensions = 0;
-
+	
+	// Collect Data...Average Distance in each cluster!
+	private ArrayList<Double> cluster_distances = new ArrayList<Double>();
+	private ArrayList<Double> distance_to_barn = new ArrayList<Double>();
 
 	public Player() 
 	{
@@ -50,7 +56,7 @@ public class Player implements sunshine.sim.Player
 
 	private double distance(Point p1, Point p2) 
 	{
-            return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2));
+        return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2));
 	}
 
 	// Purpose: Sort location of bales. Closest to furthest bale
@@ -132,12 +138,21 @@ public class Player implements sunshine.sim.Player
             // Organize how bales will be selected by tractors
             // Min to max distance
             Collections.sort(bales, pointComparator);
+            // Get distance of each bale from the barn
+            for (int i = 0; i < bales.size(); i++) 
+            {
+                distance_to_barn.add(distance(BARN, bales.get(i)));
+            }
+            int cutoff = cutoff_idx(distance_to_barn);
+            
+            // DECIDE YOUR PERCENTILE SPLIT
+            
             total_bales = bales;
             // 1- 1/2 closest to tractor
             // 2- 1/2 closest to trailer
             // input 1 = Use GREEDY oNLY
             // input 0 = Use Trailer ONLY
-            split_trailer_tractor_batch(bales, 0);
+            split_trailer_tractor_batch(bales, (double) cutoff/bales.size());
             for (int i = 0; i < n; i++) 
             {
                 trailer_map.put(i, BARN);
@@ -209,11 +224,13 @@ public class Player implements sunshine.sim.Player
                 					p = tractor_bales.remove(tractor_bales.size() - 1);
                         			return Command.createMoveCommand(p);	
             					}
+            					// TERMINATE!
             					else
             					{
             						System.out.println("In Trailers: " + in_trailer());
                                 	System.out.println("In Task List: " + taskList.get(tractor.getId()).size());
                                 	System.out.println("In tractor bale: " + tractor_bales.size());
+                                	finish();
                     				return new Command(CommandType.UNSTACK);
             					}
             				}
@@ -282,10 +299,10 @@ public class Player implements sunshine.sim.Player
 				pos.add(p);
 				dist.add(temp);
 				k++;
-			}	
+			}
 			else 
 			{
-				double temp = distance(x,p);
+				double temp = distance(x, p);
 				int i = getMaxIdx(dist);
 				max = dist.get(i);
 				if (max > temp) 
@@ -296,17 +313,20 @@ public class Player implements sunshine.sim.Player
 					pos.add(p);
 				}
 			}
-		}	
+		}
+		// Get the Distances!
+		cluster_distances.add(mean(dist));
 		return pos;
 	}
 
-	//do math to get point within 1 meter
-	private Point optimalPoint(Point p)
+	// Do math to get point within 1 meter
+	// Goal: get closer to POINT TO 
+	private Point optimalPoint(Point to, Point from, double radius)
 	{
             Point res = new Point(0,0); 
-            double mag = Math.sqrt((p.x * p.x) + (p.y * p.y));
-            res.x = p.x - (.90 *(p.x/mag)); 
-            res.y = p.y - (.90 *(p.y/mag)); 
+            double mag = Math.sqrt((to.x * to.x) + (to.y * to.y));
+            res.x = to.x - (radius * (to.x/mag)); 
+            res.y = to.y - (radius * (to.y/mag)); 
             return res; 
 	}
 
@@ -348,7 +368,7 @@ public class Player implements sunshine.sim.Player
 			else 
 			{
 				Point p = trailer_bales.remove(trailer_bales.size()-1);
-				List<Point> tasks = closestTen(p,trailer_bales);
+				List<Point> tasks = closestTen(p, trailer_bales);
 				for (int i = 0; i < tasks.size();i++) 
 				{	
                      trailer_bales.remove(trailer_bales.indexOf(tasks.get(i)));
@@ -544,6 +564,16 @@ public class Player implements sunshine.sim.Player
 		return sum;
 	}
 	
+	public Double mean(List<Double> d)
+	{
+		Double mean = new Double(0.9);
+		for(int i = 0; i < d.size();i++)
+		{
+			mean += d.get(i);
+		}
+		return mean/d.size();
+	}
+	
 	public int sum(Integer [] e)
 	{
 		int sum = 0;
@@ -575,5 +605,45 @@ public class Player implements sunshine.sim.Player
 			}
 		}
 		return grab;
+	}
+
+	// Print results of cluster distances
+	public void finish()
+	{
+		Writer writer = null;
+		try
+		{
+			writer = new BufferedWriter(new OutputStreamWriter(
+		              new FileOutputStream("cluster.txt"), "utf-8"));
+			for (int i = 0; i < cluster_distances.size();i++)
+			{
+				writer.write(cluster_distances.get(i)+",");
+				System.out.print(cluster_distances.get(i)+",");
+			}
+			System.out.println("Distances");
+			for (int i = 0; i < distance_to_barn.size();i++)
+			{
+				System.out.print(distance_to_barn.get(i)+",");
+			}
+			writer.close();
+		}
+		catch(Exception e)
+		{
+			
+		}
+	}
+	
+	public int cutoff_idx(List<Double> distance)
+	{
+		// I KNOW IT IS SORTED ALREADY! MIN TO HIGH
+		int i = 0;
+		for (; i < distance.size();i++)
+		{
+			if(distance.get(i) > DISTANCE_CUTOFF)
+			{
+				return i;
+			}
+		}
+		return i;
 	}
 }
