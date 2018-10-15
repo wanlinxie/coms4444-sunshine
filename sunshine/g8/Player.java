@@ -179,16 +179,24 @@ public class Player implements sunshine.sim.Player
             		else 
             		{
             			Point p;
+            			// IS YOUR TRAILER WITH YOU NOW OR NOT?
+            			p = trailer_map.get(tractor.getId());
+            			if(!p.equals(BARN))
+            			{
+            				return Command.createMoveCommand(p);
+            			}
+            			
             			// First priority: UNSTACK!
             			if(trailer_num.get(tractor.getId()) > 0)
             			{
-            				trailer_num.put(tractor.getId(), trailer_num.get(tractor.getId()) - 1); //update hashmap
+            				//update hashmap
+            				trailer_num.put(tractor.getId(), trailer_num.get(tractor.getId()) - 1);
             				return new Command(CommandType.UNSTACK);
             			}
             			// Time to look for another bale!
             			else
             			{
-            				// Make sure the task list is empty like for real!
+            				// Empty out tasklist
             				if(taskList.get(tractor.getId()).size() > 0)
             				{
             					p = taskList.get(tractor.getId()).remove(0);
@@ -203,18 +211,12 @@ public class Player implements sunshine.sim.Player
             					}
             					else
             					{
-            						// Diagnose.. grab any loose trailers?
-                					p = trailer_cleanup();
-                					if(p != null)
-                					{
-                						return Command.createMoveCommand(p);
-                					}
-                					else
-                					{
-                    					return new Command(CommandType.UNSTACK);	
-                					}
+            						System.out.println("In Trailers: " + in_trailer());
+                                	System.out.println("In Task List: " + taskList.get(tractor.getId()).size());
+                                	System.out.println("In tractor bale: " + tractor_bales.size());
+                    				return new Command(CommandType.UNSTACK);
             					}
-            				}	
+            				}
             			}
             		}
             	}
@@ -243,17 +245,7 @@ public class Player implements sunshine.sim.Player
                     	}
                     	else
                     	{
-                    		if(tractor_bales.isEmpty())
-                    		{
-                    			return Command.createMoveCommand(BARN);
-                    		}
-                    		else
-                    		{
-                    			System.out.println("In Trailers: " + in_trailer());
-                        		System.out.println("In Task List: " + taskList.get(tractor.getId()).size());
-                        		System.out.println("In tractor bale: " + tractor_bales.size());
-                        		return new Command(CommandType.LOAD);
-                    		}
+                        	return new Command(CommandType.LOAD);
                     	}
             		}
             	}
@@ -325,12 +317,13 @@ public class Player implements sunshine.sim.Player
 		//System.err.println("Trailer: " + trailer_bales.size());
         //System.err.println("Tractor: " + tractor_bales.size());
 
-		// ONLY SWITCH IS NO TRAILER BALES LEFT IN TASK LIST OR BALE ARRAY!
-        
-        if(trailer_bales.isEmpty() && taskList.get(tractor.getId()).size() == 0)
+		// ONLY SWITCH IS NO TRAILER BALES LEFT IN TASK LIST OR BALE ARRAY!    
+		if(trailer_bales.isEmpty() && taskList.get(tractor.getId()).size() == 0)
         {
+			System.out.println("Sink 1: ---done---");
 			return trailer_greedy(tractor);
         }
+        
                 
         // If you are at the barn and have no task...
 		if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
@@ -573,7 +566,6 @@ public class Player implements sunshine.sim.Player
 	{
 		Point grab = null;
 		Point [] remainder = trailer_map.values().toArray(new Point[trailer_map.size()]);
-		System.out.println("There are " + remainder.length + " trailers not in barn");
 		for (int i = 0; i < remainder.length; i++)
 		{
 			if(!remainder[i].equals(BARN))
