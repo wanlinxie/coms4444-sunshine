@@ -146,8 +146,8 @@ public class Player implements sunshine.sim.Player
             int cutoff = cutoff_idx(distance_to_barn);
             
             // DECIDE YOUR PERCENTILE SPLIT
-            
             total_bales = bales;
+            
             // 1- 1/2 closest to tractor
             // 2- 1/2 closest to trailer
             // input 1 = Use GREEDY oNLY
@@ -392,9 +392,6 @@ public class Player implements sunshine.sim.Player
 				//if trailer has nothing
 				if(tractor.getAttachedTrailer().getNumBales() == 0) 
 				{
-					/*if (tractor.getHasBale()) {
-						return new Command(CommandType.UNLOAD);
-					}*/
 					//either move if 
 					if ((taskList.get(tractor.getId()).size()) > 0) 
 					{
@@ -422,6 +419,7 @@ public class Player implements sunshine.sim.Player
 			}
 			else //no trailer
 			{
+				Point p;
 				if(trailer_num.get(tractor.getId()) != 0) 
 				{ 
 					//detached trailer has bales
@@ -448,10 +446,6 @@ public class Player implements sunshine.sim.Player
 						return new Command(CommandType.ATTACH);
 					}
 				}
-				tasks.add(p);
-				//sort tasks by distance to BARN,
-				Collections.sort(tasks, pointComparator);
-				taskList.put(tractor.getId(),tasks);
 			}
 		}
 		// There is no bale!
