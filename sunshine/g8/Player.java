@@ -379,7 +379,6 @@ public class Player implements sunshine.sim.Player
 				taskList.put(tractor.getId(),tasks);
 			}
 		}
-
 		//when tractor is in barn
 		if (tractor.getLocation().equals(BARN)) 
 		{
@@ -449,6 +448,10 @@ public class Player implements sunshine.sim.Player
 						return new Command(CommandType.ATTACH);
 					}
 				}
+				tasks.add(p);
+				//sort tasks by distance to BARN,
+				Collections.sort(tasks, pointComparator);
+				taskList.put(tractor.getId(),tasks);
 			}
 		}
 		// There is no bale!
@@ -533,7 +536,7 @@ public class Player implements sunshine.sim.Player
 							return Command.createMoveCommand(p);
 						}
 					}
-				}
+				} 
 				else 
 				{ 
 					//tasklist done
