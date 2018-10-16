@@ -175,7 +175,7 @@ public class Player implements sunshine.sim.Player
 
             // Is the tractor at the barn
 			//if(tractor.getLocation().equals(BARN))
-			if(within_range(BARN, tractor.getLocation(), 1.0))
+			if(within_range(BARN, tractor.getLocation(), 0.91))
             {
             	if (tractor.getHasBale()) 
         		{
@@ -214,18 +214,18 @@ public class Player implements sunshine.sim.Player
             				if(taskList.get(tractor.getId()).size() > 0)
             				{
             					p = taskList.get(tractor.getId()).remove(0);
-            					//Point o = optimal_point(BARN, p, 1);
-            					//return Command.createMoveCommand(o);
-            					return Command.createMoveCommand(p);
+            					Point o = optimal_point(p, BARN, 0.9);
+            					return Command.createMoveCommand(o);
+            					//return Command.createMoveCommand(p);
             				}
             				else
             				{
             					if(!tractor_bales.isEmpty())
             					{
                 					p = tractor_bales.remove(tractor_bales.size() - 1);
-                					//Point o = optimal_point(BARN, p, 1);
-                					//return Command.createMoveCommand(o);
-                        			return Command.createMoveCommand(p);
+                					Point o = optimal_point(p, BARN, 0.9);
+                					return Command.createMoveCommand(o);
+                        			//return Command.createMoveCommand(p);
             					}
             					// TERMINATE!
             					else
@@ -254,7 +254,7 @@ public class Player implements sunshine.sim.Player
             	{
             		// If on trailer location, attach and GO!
             		//if(trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
-            		if(within_range(trailer_map.get(tractor.getId()), tractor.getLocation(), 1.0))
+            		if(within_range(trailer_map.get(tractor.getId()), tractor.getLocation(), 0.9))
             		{
             			return new Command(CommandType.ATTACH);
             		}
@@ -325,12 +325,12 @@ public class Player implements sunshine.sim.Player
 
 	// Do math to get point within 1 meter
 	// Goal: get closer to POINT TO 
-	private Point optimal_point(Point to, Point from, double radius)
+	private Point optimal_point(Point xy1, Point xy0, double d)
 	{
-            Point res = new Point(0,0); 
-            double mag = Math.sqrt((to.x * to.x) + (to.y * to.y));
-            res.x = to.x - (radius * (to.x/mag)); 
-            res.y = to.y - (radius * (to.y/mag)); 
+			Point v = new Point(xy1.x -xy0.x, xy1.y -xy0.y); 
+			double mag = Math.sqrt((v.x * v.x) + (v.y * v.y));
+            Point u = new Point((v.x/mag),(v.y/mag)); 
+            Point res = new Point((xy1.x-d*(u.x)), (xy1.y- d*(u.y))); 
             return res; 
 	}
 	
