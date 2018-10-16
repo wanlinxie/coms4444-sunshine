@@ -23,11 +23,12 @@ public class Player implements sunshine.sim.Player
 
 class Group{
 	List<Point> bales; 
-	int tractors; 
+	List<Integer> tractors;
 
 	public Group(List<Point> bales){
 		this.bales = bales; 
-		tractors = 0; 
+		tractors = new ArrayList<Integer>(); 
+		
 	}
 
 }
@@ -52,7 +53,8 @@ class Group{
 
 	//private HashMap<List<Integer>, List<Point>> coordinate = new HashMap<List<Integer>, List<Point>>(); 
 
-	private List<Group> coordinate = new ArrayList<Group>(); 
+	private List<Group> sendOut = new ArrayList<Group>(); 
+	private List<Group> bringIn = new ArrayList<Group>(); 
 
 	private boolean is_not_removed = true;
 
@@ -100,16 +102,12 @@ class Group{
 
 	public void init(List<Point> bales, int n, double m, double t)
 	{
-		// Organize how bales will be selected by tractors
-		// Min to max distance
-
-		int assigned = 1; 
-
+		
 		Collections.sort(bales, pointComparator);
 		this.tractor_bales = bales; 
-		while(tractor_bales.size() > 33 && (assigned <= n)){
+		while(tractor_bales.size() > 33){
 			Point p = tractor_bales.remove(tractor_bales.size()-1);
-			List<Point> tasks = closestTen(p,tractor_bales);
+			List<Point> tasks = closest32(p,tractor_bales);
 			for (int i=0;i<tasks.size();i++) 
 			{
 				tractor_bales.remove(tractor_bales.indexOf(tasks.get(i)));
@@ -119,23 +117,15 @@ class Group{
 			Collections.sort(tasks, pointComparator);
 
 			Group group = new Group(tasks); 
-			coordinate.add(group); 
+			sendOut.add(group); 
+			bringIn.add(group); 
 
 		}
-
-
-		// 1- 1/2 closest to tractor
-		// 2- 1/2 closest to trailer
-		// For now, all of them will go to trailer...
-		// split_trailer_tractor_batch(bales, 1);
-		
-		// for (int i=0;i<n;i++) 
-		// {
-		// 	trailer_map.put(i,new Point(0.0,0.0));
-		// 	trailer_num.put(i,0);
-
-		// 	taskList.put(i, new ArrayList<Point>());
-		// }
+		for (int i=0;i<n;i++) 
+		{
+			trailer_map.put(i,new Point(0.0,0.0));
+			trailer_num.put(i,0);
+		} 
 		this.n_tractors = n;
 		this.dimensions = m;
 	}
@@ -326,21 +316,40 @@ class Group{
 				{
 				
 					//if the list of groups is not empty 
-					if (coordinate.size() > 0) 
+					if (sendOut.size() > 0) 
 					{ 
-						//tractor has tasks
-						Group group = coordinate.get(0); 
-						if(group.tractors < 4){
-							List<Point> points = group.bales; 
-							Point p = points.get(0); 
-							group.bales.remove(0); 
+						//send tractor 1 
+						Group group = sendOut.get(0); 
+
+						if(group.tractors.size() == 0){	
+							
+							sendOut.get(0).tractors.add(tractor.getId()); 
+							bringIn.get(0).tractors.add(tractor.getId()); 
+
+							Point p = group.bales.get(0);
 							Point o = optimalPoint(p); 
-							group.tractors += 1; 
-							return Command.createMoveCommand(o);
+							return Command.createMoveCommand(o); 
 						}
+						//send tractor 2 
+						else if(group.tractors.size() == 1){
+							sendOut.get(0).tractors.add(tractor.getId()); 
+							bringIn.get(0).tractors.add(tractor.getId()); 
+							Point p = group.bales.get(1);
+							Point o = optimalPoint(p); 
+							return Command.createMoveCommand(o); 
+						}
+						//send tractor 3
+						else if(group.tractors.size() == 2){
+							sendOut.get(0).tractors.add(tractor.getId()); 
+							bringIn.get(0).tractors.add(tractor.getId()); 
+							Point p = group.bales.get(2);
+							Point o = optimalPoint(p); 
+							return Command.createMoveCommand(o); 
+						}
+						//something is wrong here, when unstack? 
 						else{ 
-							coordinate.remove(0); 
-							return new Command(CommandType.UNSTACK);
+							sendOut.remove(0); 
+							return Command.createMoveCommand(BARN);
 						}
 					}
 					else 
@@ -393,7 +402,7 @@ class Group{
 			if (tractor.getAttachedTrailer() != null) //trailer attached, only attach with bale in forklift
 			{
 				//nothing in trailer have things to do 
-				if (tractor.getAttachedTrailer().getNumBales() == 0 && taskList.get(tractor.getId()).size() != 0) 
+				if (tractor.getAttachedTrailer().getNumBales() == 0) 
 				{
 					//nothing in trailer
 					trailer_map.put(tractor.getId(),tractor.getLocation());
@@ -402,8 +411,7 @@ class Group{
 				else 
 				{
 					// Something in trailer, ready to move (should be 10)  //finished all tasks, ready to move to barn
-					Point p = new Point(0.0,0.0);
-					trailer_map.put(tractor.getId(), p);
+					trailer_map.put(tractor.getId(), BARN);
 					return Command.createMoveCommand(BARN);
 				}
 			}
@@ -411,7 +419,9 @@ class Group{
 			else 
 			{
 				Point trail_loc = trailer_map.get(tractor.getId()); //location of the trailer
-				if (taskList.get(tractor.getId()).size() > 0) 
+				
+				//if tractor is listed in group, it has tasks 
+				if(bringIn.get(0).tractors.contains(tractor.getId())) 
 				{ 
 					//something to do in the tasklist
 					//if trailer has less than 10 bales on it 
@@ -431,17 +441,17 @@ class Group{
 							else 
 							{ 
 								//move to trailer
-								Point o = optimalPoint(trail_loc); 
-								return Command.createMoveCommand(o);
+								//Point o = optimalPoint(trail_loc); 
+								return Command.createMoveCommand(trail_loc);
 							}
 						} 
 						//forklift doesn't have bale, go to next in task list
 						else 
 						{ 
-							if(coordinate.get(0).bales.size() != 0){ 
+							if(bringIn.get(0).bales.size() != 0){ 
 							// no bale, need to go to next bale to 
-								Point p = coordinate.get(0).bales.get(0); 
-								coordinate.get(0).bales.remove(0); 
+								Point p = bringIn.get(0).bales.get(0); 
+								bringIn.get(0).bales.remove(0); 
 								
 								if (tractor.getLocation().equals(p)) 
 								{
@@ -451,21 +461,26 @@ class Group{
 									return Command.createMoveCommand(p);
 								}
 							} 
-							else{
-								return new Command(CommandType.LOAD);
-							}
 
+							else{
+								bringIn.remove(0); 
+								Point p = bringIn.get(0).bales.get(0); 
+								bringIn.get(0).bales.remove(0); 
+								return new Command(CommandType.LOAD);
+						
+							}
+					
 						}
-					} 
+					}
 					else 
 					{ 
 						//trailer is full, tractor must load
-						Point p = coordinate.get(0).bales.get(0); 
+						Point p = bringIn.get(0).bales.get(0); 
 						if (tractor.getLocation().equals(p)) 
 						{
-							coordinate.get(0).bales.remove(0);
-							if(coordinate.get(0).bales.size() == 0){
-								coordinate.remove(0); 
+							bringIn.get(0).bales.remove(0);
+							if(bringIn.get(0).bales.size() == 0){
+								bringIn.remove(0); 
 							}
 							//tractor_bales.remove(tractor_bales.size()-1);
 							return new Command(CommandType.LOAD);
