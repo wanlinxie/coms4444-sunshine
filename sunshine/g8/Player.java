@@ -32,8 +32,6 @@ public class Player implements sunshine.sim.Player
 	private List<Point> trailer_bales;
     private List<Point> total_bales;
 
-	// Make list of centroids, Deposit points for the trailer
-	private List<Point> centroids = new ArrayList<Point>();
 
 	// Map the TractorID (matched with trailer it is matched to...to Location of Trailer
 	private HashMap<Integer, Point> trailer_map = new HashMap<Integer, Point>(); 
@@ -382,13 +380,19 @@ public class Player implements sunshine.sim.Player
             }
 			else if (trailer_bales.size() <= 11) 
 			{
-				List<Point> tasks = new ArrayList<Point>();
+				for (int i=0;i<trailer_bales.size();i++) {
+					tractor_bales.add(trailer_bales.remove(i));
+				}
+				return trailer_greedy(tractor);
+
+				
+				/*List<Point> tasks = new ArrayList<Point>();
 				for(int i = 0;i < trailer_bales.size();i++)
 				{	
                      tasks.add(trailer_bales.remove(i));
 				}
 				Collections.sort(tasks, pointComparator);
-				taskList.put(tractor.getId(),tasks);
+				taskList.put(tractor.getId(),tasks);*/
 			}
 			else 
 			{
