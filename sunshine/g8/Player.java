@@ -17,8 +17,21 @@ import sunshine.sim.Point;
 import sunshine.sim.Trailer;
 
 
+
 public class Player implements sunshine.sim.Player 
 {
+
+class Group{
+	List<Point> bales; 
+	int tractors; 
+
+	public Group(List<Point> bales){
+		this.bales = bales; 
+		tractors = 0; 
+	}
+
+}
+
 	// Random seed of 42.
 	private int seed = 42;
 	private Random rand;
@@ -37,7 +50,14 @@ public class Player implements sunshine.sim.Player
 
 	private HashMap<Integer, List<Point>> taskList = new HashMap<Integer, List<Point>>();
 
+	//private HashMap<List<Integer>, List<Point>> coordinate = new HashMap<List<Integer>, List<Point>>(); 
+
+	private List<Group> coordinate = new ArrayList<Group>(); 
+
 	private boolean is_not_removed = true;
+
+
+	//
 
 
 	// Get number of tractors, change stategy as needed
@@ -77,69 +97,45 @@ public class Player implements sunshine.sim.Player
 		}
 	};
 
-	// Will break a list into a list<list>, maxmimize all lists up to n.
-	// The last list may be size n or less
-	public ArrayList<List<Point>> split_list_n(List<Point> full, int n)
-	{
-		ArrayList<List<Point>> split = new ArrayList<List<Point>>();
-		for (int i = 0; i < full.size();i+=n)
-		{
-			List<Point> chunk = new ArrayList<Point>();
-			for (int j = i; j < n; j++)
-			{
-				// Edge case: last batch has less than 11 bales
-				if(j >= full.size())
-				{
-					return split;
-				}
-				chunk.add(full.get(j));
-			}
-			split.add(chunk);
-		}
-		return split;
-	}
-
-	// Split the Tractor and Trailer bale depending on the index.
-	public void split_trailer_tractor_batch(List<Point> bales, double split)
-	{
-		if(split == 1)
-		{
-			this.tractor_bales = bales;
-			this.trailer_bales = new ArrayList<Point>();
-			return;
-		}
-		else if(split == 0)
-		{
-			this.tractor_bales = new ArrayList<Point>();
-			this.trailer_bales = bales;
-			return;
-		}
-		// split determines the fraction going to tractor.
-		// e.g 1/2 means 1/2 tractor 1/2 trailer
-		// e.g 1/3 means 1/3 tractor and 2/3 trailer
-		int split_idx = (int) (bales.size() * split);
-		this.trailer_bales = bales.subList(0, split_idx);
-		this.tractor_bales = bales.subList(split_idx, bales.size());
-	}
 
 	public void init(List<Point> bales, int n, double m, double t)
 	{
 		// Organize how bales will be selected by tractors
 		// Min to max distance
+
+		int assigned = 1; 
+
 		Collections.sort(bales, pointComparator);
+		this.tractor_bales = bales; 
+		while(tractor_bales.size() > 33 && (assigned <= n)){
+			Point p = tractor_bales.remove(tractor_bales.size()-1);
+			List<Point> tasks = closestTen(p,tractor_bales);
+			for (int i=0;i<tasks.size();i++) 
+			{
+				tractor_bales.remove(tractor_bales.indexOf(tasks.get(i)));
+			}
+			tasks.add(p);
+			//sort tasks by distance to BARN,
+			Collections.sort(tasks, pointComparator);
+
+			Group group = new Group(tasks); 
+			coordinate.add(group); 
+
+		}
+
 
 		// 1- 1/2 closest to tractor
 		// 2- 1/2 closest to trailer
 		// For now, all of them will go to trailer...
-		split_trailer_tractor_batch(bales, 1);
+		// split_trailer_tractor_batch(bales, 1);
 		
-		for (int i=0;i<n;i++) 
-		{
-			trailer_map.put(i,new Point(0.0,0.0));
-			trailer_num.put(i,0);
+		// for (int i=0;i<n;i++) 
+		// {
+		// 	trailer_map.put(i,new Point(0.0,0.0));
+		// 	trailer_num.put(i,0);
 
-			taskList.put(i, new ArrayList<Point>());
-		}
+		// 	taskList.put(i, new ArrayList<Point>());
+		// }
 		this.n_tractors = n;
 		this.dimensions = m;
 	}
@@ -181,6 +177,9 @@ public class Player implements sunshine.sim.Player
 			}
 		}
 	}
+
+
+
 	private int getMaxIdx(List<Double> ptlist) 
 	{
 		double max = 0;
@@ -231,6 +230,40 @@ public class Player implements sunshine.sim.Player
 		return pos;
 	}
 
+	private List<Point> closest32(Point x, List<Point> currBales) 
+	{
+		List<Point> pos = new ArrayList<Point>();
+		List<Double> dist = new ArrayList<Double>();
+
+		int k=0;
+		double max = 0;
+
+		for (Point p: currBales) 
+		{
+			if(k < 32) 
+			{
+				double temp = distance(x,p);
+				pos.add(p);
+				dist.add(temp);
+				k++;
+			}
+			else 
+			{
+				double temp = distance(x,p);
+				int i = getMaxIdx(dist);
+				max = dist.get(i);
+				if (max > temp) 
+				{
+					dist.remove(i);
+					pos.remove(i);
+					dist.add(temp);
+					pos.add(p);
+				}
+			}
+		}
+		return pos;
+	}
+
 	//do math to get point within 1 meter
 	private Point optimalPoint(Point p)
 	{
@@ -247,38 +280,36 @@ public class Player implements sunshine.sim.Player
 			System.out.println(i+" "+done.get(i));
 		}*/
 		//System.out.println(tractor_bales.size());
-		if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
-		{ 
-			//empty list right now
-			//pick farthest point
-			if (tractor_bales.size() == 0)
-			{
-				System.out.println("done");
-			}
-			else if (tractor_bales.size() <= 11) 
-			{
-				List<Point> tasks = new ArrayList<Point>();
-				for(int i=0;i<tractor_bales.size();i++)
-				{
-					tasks.add(tractor_bales.remove(i));
-				}
-				Collections.sort(tasks, pointComparator);
-				taskList.put(tractor.getId(),tasks);
-			}
-			else 
-			{
-				Point p = tractor_bales.remove(tractor_bales.size()-1);
-				List<Point> tasks = closestTen(p,tractor_bales);
-				for (int i=0;i<tasks.size();i++) 
-				{
-					tractor_bales.remove(tractor_bales.indexOf(tasks.get(i)));
-				}
-				tasks.add(p);
-				//sort tasks by distance to BARN,
-				Collections.sort(tasks, pointComparator);
-				taskList.put(tractor.getId(),tasks);
-			}
-		}
+	
+
+
+		// if (taskList.get(tractor.getId()).size() == 0 && tractor.getLocation().equals(BARN))
+		// { 
+		// 	//empty list right now
+		// 	//pick farthest point
+		// 	if (tractor_bales.size() == 0)
+		// 	{
+		// 		System.out.println("done");
+		// 	}
+		// 	else if (tractor_bales.size() <= 11) 
+		// 	{
+		// 		List<Point> tasks = new ArrayList<Point>();
+		// 		for(int i=0;i<tractor_bales.size();i++)
+		// 		{
+		// 			tasks.add(tractor_bales.remove(i));
+		// 		}
+		// 		Collections.sort(tasks, pointComparator);
+		// 		taskList.put(tractor.getId(),tasks);
+		// 	}
+		// 	else 
+		// 	{
+		// 		List<Point> tasks = tractor_bales; 
+		// 		//sort tasks by distance to BARN,
+		// 		Collections.sort(tasks, pointComparator);
+		// 		taskList.put(tractor.getId(),tasks);
+				
+		// 	}
+		// }
 
 		//when tractor is in barn
 		if (tractor.getLocation().equals(BARN)) 
@@ -293,27 +324,32 @@ public class Player implements sunshine.sim.Player
 				//if trailer has nothing
 				if(tractor.getAttachedTrailer().getNumBales() == 0) 
 				{
-					/*if (tractor.getHasBale()) {
-						return new Command(CommandType.UNLOAD);
-					}*/
-					//either move if 
-					if ((taskList.get(tractor.getId()).size()) > 0) 
+				
+					//if the list of groups is not empty 
+					if (coordinate.size() > 0) 
 					{ 
 						//tractor has tasks
-						Point p = taskList.get(tractor.getId()).get(0);
-						//TODO
-						//do a function here, that optimizes p 
-						//closest to barn and one m away from bale
-
-						//Point o = optimalPoint(p); 
-						return Command.createMoveCommand(p);
+						Group group = coordinate.get(0); 
+						if(group.tractors < 4){
+							List<Point> points = group.bales; 
+							Point p = points.get(0); 
+							group.bales.remove(0); 
+							Point o = optimalPoint(p); 
+							group.tractors += 1; 
+							return Command.createMoveCommand(o);
+						}
+						else{ 
+							coordinate.remove(0); 
+							return new Command(CommandType.UNSTACK);
+						}
 					}
 					else 
 					{ 
 						// tractor has no tasks, just stay at barn, no op
 						return new Command(CommandType.UNSTACK);
 					}
-				} 
+				}
+
 				else 
 				{ 
 					//trailer is attached, trailer has bales
@@ -395,37 +431,42 @@ public class Player implements sunshine.sim.Player
 							else 
 							{ 
 								//move to trailer
-								return Command.createMoveCommand(trail_loc);
+								Point o = optimalPoint(trail_loc); 
+								return Command.createMoveCommand(o);
 							}
 						} 
 						//forklift doesn't have bale, go to next in task list
 						else 
 						{ 
+							if(coordinate.get(0).bales.size() != 0){ 
 							// no bale, need to go to next bale to 
-							Point p = taskList.get(tractor.getId()).get(0);
-							//Point p = tractor_bales.get(tractor_bales.size()-1);
-							//if you happen to already be there, load 
-							// TODO
-							//OR IF LOCATION IS WITHIN ONE METER
-							if (tractor.getLocation().equals(p)) 
-							{
-								taskList.get(tractor.getId()).remove(0);
-								//tractor_bales.remove(tractor_bales.size()-1);
+								Point p = coordinate.get(0).bales.get(0); 
+								coordinate.get(0).bales.remove(0); 
+								
+								if (tractor.getLocation().equals(p)) 
+								{
+									return new Command(CommandType.LOAD);
+								}
+								else{
+									return Command.createMoveCommand(p);
+								}
+							} 
+							else{
 								return new Command(CommandType.LOAD);
 							}
-							else 
-							{
-								return Command.createMoveCommand(p);
-							}
+
 						}
 					} 
 					else 
 					{ 
 						//trailer is full, tractor must load
-						Point p = taskList.get(tractor.getId()).get(0);
+						Point p = coordinate.get(0).bales.get(0); 
 						if (tractor.getLocation().equals(p)) 
 						{
-							taskList.get(tractor.getId()).remove(0);
+							coordinate.get(0).bales.remove(0);
+							if(coordinate.get(0).bales.size() == 0){
+								coordinate.remove(0); 
+							}
 							//tractor_bales.remove(tractor_bales.size()-1);
 							return new Command(CommandType.LOAD);
 						}
@@ -451,6 +492,13 @@ public class Player implements sunshine.sim.Player
 					}
 				}
 			}
+	
 		}
+	
 	}
 }
+
+
+
+
+
