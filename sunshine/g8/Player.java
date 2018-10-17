@@ -174,8 +174,8 @@ public class Player implements sunshine.sim.Player
             // BUT THERE ARE TRAILERS WITH SOME BALES IN THEM. WE MUST FACTOR THIS IN
 
             // Is the tractor at the barn
-			//if(tractor.getLocation().equals(BARN))
-			if(within_range(BARN, tractor.getLocation(), 0.91))
+			if(tractor.getLocation().equals(BARN))
+			//if(within_range(BARN, tractor.getLocation(), 0.91))
             {
             	if (tractor.getHasBale()) 
         		{
@@ -214,18 +214,18 @@ public class Player implements sunshine.sim.Player
             				if(taskList.get(tractor.getId()).size() > 0)
             				{
             					p = taskList.get(tractor.getId()).remove(0);
-            					Point o = optimal_point(p, BARN, 0.9);
-            					return Command.createMoveCommand(o);
-            					//return Command.createMoveCommand(p);
+            					//Point o = optimal_point(p, BARN, 0.9);
+            					//return Command.createMoveCommand(o);
+            					return Command.createMoveCommand(p);
             				}
             				else
             				{
             					if(!tractor_bales.isEmpty())
             					{
                 					p = tractor_bales.remove(tractor_bales.size() - 1);
-                					Point o = optimal_point(p, BARN, 0.9);
-                					return Command.createMoveCommand(o);
-                        			//return Command.createMoveCommand(p);
+                					//Point o = optimal_point(p, BARN, 0.9);
+                					//return Command.createMoveCommand(o);
+                        			return Command.createMoveCommand(p);
             					}
             					// TERMINATE!
             					else
@@ -233,7 +233,7 @@ public class Player implements sunshine.sim.Player
             						System.out.println("In Trailers: " + in_trailer());
                                 	System.out.println("In Task List: " + taskList.get(tractor.getId()).size());
                                 	System.out.println("In tractor bale: " + tractor_bales.size());
-                                	finish();
+                                	//finish();
                     				return new Command(CommandType.UNSTACK);
             					}
             				}
@@ -253,8 +253,8 @@ public class Player implements sunshine.sim.Player
             	else
             	{
             		// If on trailer location, attach and GO!
-            		//if(trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
-            		if(within_range(trailer_map.get(tractor.getId()), tractor.getLocation(), 0.9))
+            		if(trailer_map.get(tractor.getId()).equals(tractor.getLocation()))
+            		//if(within_range(trailer_map.get(tractor.getId()), tractor.getLocation(), 0.9))
             		{
             			return new Command(CommandType.ATTACH);
             		}
@@ -378,21 +378,22 @@ public class Player implements sunshine.sim.Player
                    System.out.println("Sink 2: ---done---");
                    return trailer_greedy(tractor);
             }
-			else if (trailer_bales.size() <= 11) 
+			else if (trailer_bales.size() < 11) 
 			{
+				/*
 				for (int i=0;i<trailer_bales.size();i++) {
 					tractor_bales.add(trailer_bales.remove(i));
 				}
 				return trailer_greedy(tractor);
-
+				*/
 				
-				/*List<Point> tasks = new ArrayList<Point>();
+				List<Point> tasks = new ArrayList<Point>();
 				for(int i = 0;i < trailer_bales.size();i++)
 				{	
                      tasks.add(trailer_bales.remove(i));
 				}
 				Collections.sort(tasks, pointComparator);
-				taskList.put(tractor.getId(),tasks);*/
+				taskList.put(tractor.getId(),tasks);
 			}
 			else 
 			{
