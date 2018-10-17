@@ -197,6 +197,7 @@ public class Player implements sunshine.sim.Player
             			p = trailer_map.get(tractor.getId());
             			if(!p.equals(BARN))
             			{
+            				Point o = optimal_point(p, BARN, .9); 
             				return Command.createMoveCommand(p);
             			}
             			
@@ -216,6 +217,7 @@ public class Player implements sunshine.sim.Player
             					p = taskList.get(tractor.getId()).remove(0);
             					//Point o = optimal_point(p, BARN, 0.9);
             					//return Command.createMoveCommand(o);
+            					//these seem to cause errors
             					return Command.createMoveCommand(p);
             				}
             				else
@@ -225,6 +227,7 @@ public class Player implements sunshine.sim.Player
                 					p = tractor_bales.remove(tractor_bales.size() - 1);
                 					//Point o = optimal_point(p, BARN, 0.9);
                 					//return Command.createMoveCommand(o);
+                					//these seem to cause errors
                         			return Command.createMoveCommand(p);
             					}
             					// TERMINATE!
@@ -327,11 +330,14 @@ public class Player implements sunshine.sim.Player
 	// Goal: get closer to POINT TO 
 	private Point optimal_point(Point xy1, Point xy0, double d)
 	{
-			Point v = new Point(xy1.x -xy0.x, xy1.y -xy0.y); 
-			double mag = Math.sqrt((v.x * v.x) + (v.y * v.y));
-            Point u = new Point((v.x/mag),(v.y/mag)); 
-            Point res = new Point((xy1.x-d*(u.x)), (xy1.y- d*(u.y))); 
-            return res; 
+		Point v = new Point(xy1.x -xy0.x, xy1.y -xy0.y); 
+		double mag = Math.sqrt((v.x * v.x) + (v.y * v.y));
+		if(mag == 0){
+			return xy1; 
+		}
+            	Point u = new Point((v.x/mag),(v.y/mag)); 
+            	Point res = new Point((xy1.x-d*(u.x)), (xy1.y- d*(u.y))); 
+            	return res; 
 	}
 	
 	private boolean within_range(Point centroid, Point current, double radius)
@@ -431,8 +437,8 @@ public class Player implements sunshine.sim.Player
 						//do a function here, that optimizes p 
 						//closest to barn and one m away from bale
 
-						//Point o = optimalPoint(p); 
-						return Command.createMoveCommand(p);
+						Point o = optimal_point(p, BARN, .9); 
+						return Command.createMoveCommand(o);
                     }
                     // THIS LINE NEVER HAPPENS
 					else 
@@ -522,6 +528,7 @@ public class Player implements sunshine.sim.Player
 							else 
 							{ 
 								//move to trailer
+								//Point o = optimal_point(trail_loc, tractor.getLocation(), .9); 
 								return Command.createMoveCommand(trail_loc);
 							}
 						} 
@@ -541,6 +548,7 @@ public class Player implements sunshine.sim.Player
 							}
 							else 
 							{
+								//Point o = optimal_point(p, BARN, )
 								return Command.createMoveCommand(p);
 							}
 						}
