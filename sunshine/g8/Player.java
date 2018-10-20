@@ -161,6 +161,7 @@ class Group{
 				Point p = tractor_bales.remove(tractor_bales.size()-1);
 				return Command.createMoveCommand(p);
 			}
+			//so maybe this command isnt getting hit? 
 			else
 			{
 				return new Command(CommandType.LOAD);
