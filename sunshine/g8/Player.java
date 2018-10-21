@@ -143,6 +143,9 @@ public class Player implements sunshine.sim.Player
 	{
 	         // Organize how bales will be selected by tractors
 	         // Min to max distance
+            	this.n_tractors = n; 
+            	this.dimensions = m;
+
             	Collections.sort(bales, pointComparator);
             	this.tractor_bales = bales; 
             	// Get distance of each bale from the barn
@@ -181,34 +184,36 @@ public class Player implements sunshine.sim.Player
             	{
                 	trailer_map.put(i, BARN);
                 	trailer_num.put(i, 0); 
-                	taskList.put(i, new ArrayList<Point>());
+                	//taskList.put(i, new ArrayList<Point>());
             	}
             	assignGroups(); 
 
-            	this.n_tractors = n;
-            	this.dimensions = m;
+            
         }
 
         private void assignGroups(){
-        	int index = 0; 
+        	//int index = 0; 
         	int i = 0; 
-        	while(i < n_tractors-2){
+        	System.out.println("I" + i + "n_tractors" + n_tractors); 
+        	while(i < (n_tractors-2)){
         		
         		List<Integer> trailers = new ArrayList<Integer>(); 
         		trailers.add(i); 
         		trailers.add(i+1); 
         		trailers.add(i+2); 
 
-        		taskList.put(i, groupings.get(index)); 
-        		taskList.put(i+1, groupings.get(index)); 
-        		taskList.put(i+2, groupings.get(index));
+        		System.out.println("Groupings at index" + groupings.get(0)); 
+        		System.out.println("PRINT ME"); 
+        		taskList.put(i, groupings.get(0)); 
+        		taskList.put(i+1, groupings.get(0)); 
+        		taskList.put(i+2, groupings.get(0));
         		
         		tractorToTrailers.put(i, trailers);
         		tractorToTrailers.put(i+1, trailers); 
         		tractorToTrailers.put(i+2, trailers);  
         		
         		i+= 3; 
-        		index++; 
+        		groupings.remove(0); 
 
         	}
 
@@ -241,7 +246,7 @@ public class Player implements sunshine.sim.Player
             // BUT THERE ARE TRAILERS WITH SOME BALES IN THEM. WE MUST FACTOR THIS IN
 
             // Is the tractor at the barn
-			if(tractor.getLocation().equals(BARN))
+		if(tractor.getLocation().equals(BARN))
 			//if(within_range(BARN, tractor.getLocation(), 0.91))
             {
             	if (tractor.getHasBale()) 
@@ -468,6 +473,14 @@ public class Player implements sunshine.sim.Player
 		// 	}
 		// }
 		//when tractor is in barn
+		if(tractor_bales.size() < 33 && taskList.get(tractor.getId()).size() == 0){
+			return trailer_greedy(tractor); 
+		}
+		if(taskList.size() == 0){
+			System.out.println("YOU HAVE SECOND ASSIGNMENT"); 
+			assignGroups(); 
+		}
+
 		if (tractor.getLocation().equals(BARN)) 
 		{
 			//if at barn and has bale, always unload
@@ -565,11 +578,11 @@ public class Player implements sunshine.sim.Player
 				Point trail_loc;
 				int temp;  
 				
-				if(groupings.get(0).size() > 22){
+				if(taskList.get(tractor.getId()).size() > 22){
 					temp = tractorToTrailers.get(tractor.getId()).get(0); 
 					trail_loc = trailer_map.get(temp); 
 				}
-				if(groupings.get(0).size() > 11){
+				if(taskList.get(tractor.getId()).size() > 11){
 					trail_loc = trailer_map.get(tractorToTrailers.get(tractor.getId()).get(1)); 
 				}
 				else{
