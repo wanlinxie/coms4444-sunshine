@@ -218,6 +218,15 @@ public class Player implements sunshine.sim.Player
         	}
 
         	System.out.println("Task list size:" + taskList.size()); 
+
+        	temp = taskList.get(0); 
+        	for(Point p : temp){
+        		System.out.println(p); 
+        	}
+        	System.out.println("TaskList" + taskList); 
+
+        	System.out.println("WHYYYYYYY"); 
+
         }
 	// OPTON 1: USE NO TRAILER, for use with 1 Tractor
 	public Command trailer_greedy(Tractor tractor)
